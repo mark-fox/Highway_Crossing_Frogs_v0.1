@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Highway Crossing Frogs</title>
+<!--Linking CSS stylesheet.-->
+<link type="text/css" rel="stylesheet" href="styles.css"/>
+<!--Linking JavaScript file, but couldn't get to work.-->
+<script language="javascript" type="text/javascript" src="javascript_code.js"></script>
+</head>
+<body>
+<!--Adding HTML elements-->
+<div id="canvases" style="position: relative">
+    <canvas id="myCanvasBack"></canvas>
+    <canvas id="myCanvas"></canvas>
+</div>
+<div id="intros">
+    <p id="intro1"></p>
+    <p id="intro2"></p>
+</div>
+    <script>
+//        Defining canvas elements
+        var theCanvas = document.getElementById('myCanvas');
+        var theContext = theCanvas.getContext('2d');
+        var theBackground = document.getElementById('myCanvasBack');
+        var theBackContext = theBackground.getContext('2d');
+        var theDiv = document.getElementById("intros");
+        var intro1 = document.getElementById("intro1");
+        var intro2 = document.getElementById("intro2");
+
+
+//        Setting global variables
+        var canvasWidth = 800;
+        var canvasHeight = 600;
+        var heightIncr = 100;
+        var playerLives = 3;
+        var elapsedTime = 0;
+        var gameover = false;
+        var startX = 30;
+        var startY = canvasHeight * .70;
+        var keys = [];
+
+
+//        Startup event listener
+        window.onload = startIntro();
+
+
+        // Introduction function
+        function startIntro() {
+            theDiv.style.position = "absolute";
+            theDiv.style.top = (canvasHeight+20) + "px";
+            theDiv.style.left = "15px";
+            intro1.innerHTML = "In a world where cars can change their direction in an instance...";
+            intro2.innerHTML = "One car will risk everything to make it past the highway of crossing frogs!!!";
+            setTimeout(startGame,5000);
+        }
+
+
+//        Init function
+        function startGame() {
+            theCanvas.width = canvasWidth;
+            theCanvas.height = canvasHeight;
+            theCanvas.style.border = "2px solid";
+            theCanvas.style.position = "absolute";
+            theCanvas.style.top = 0;
+            theCanvas.style.left = 0;
+
+            theBackground.width = canvasWidth;
+            theBackground.height = canvasHeight;
+            theBackground.style.position = "absolute";
+            theBackground.style.top = 0;
+            theBackground.style.left = 0;
+
+            drawBackground();
+            setTimeout(setInterval(function(){
+                elapsedTime += 1;
+            },1000),3000);
+            setInterval(draw,40);
+            intro1.innerHTML = "Instructions: Use the arrow keys to control the car and avoid hitting any frogs.";
+            intro2.innerHTML = "The game ends when you run out of lives (shown in top left corner).";
+        }
+
+
+//        Background Init function
+        function drawBackground() {
+            theBackContext.fillRect(0,theBackground.height - (heightIncr*3),theBackground.width,10);
+            theBackContext.fillRect(0,theBackground.height - heightIncr,theBackground.width,10);
+            theBackContext.strokeStyle = "rgb(237,227,40)";
+            theBackContext.lineWidth = 10;
+            theBackContext.setLineDash([25, 15]);
+            theBackContext.beginPath();
+            theBackContext.moveTo(0,(theBackground.height-(heightIncr*2))*.97);
+            theBackContext.lineTo(theBackground.width,(theBackground.height-(heightIncr*2))*.97);
+            theBackContext.stroke();
+
+            theBackContext.setLineDash([]);
+            theBackContext.lineWidth = 5;
+            theBackContext.strokeStyle = 'rgb(239,205,151)';
+            theBackContext.beginPath();
+            theBackContext.moveTo(0,(theBackground.height/2) - heightIncr);
+            theBackContext.lineTo(theBackground.width,(theBackground.height/2) - heightIncr);
+            theBackContext.stroke();
+
+            // West Mountains
+            drawMountains(0);
+            // East Mountains
+            drawMountains(500);
+            // West Clouds
+            drawClouds(0);
+            // East Clouds
+            drawClouds(500);
+        }
+
+
+        function drawMountains(xDiff) {
+            theBackContext.strokeStyle = 'gray';
+            theBackContext.setLineDash([]);
+            var baseline = (theBackground.height/2) - heightIncr;
+            // Left, smaller mountain
+            theBackContext.beginPath();
+            theBackContext.moveTo(100+xDiff,baseline);
+            theBackContext.lineTo(130+xDiff,baseline-50);
+            theBackContext.lineTo(160+xDiff,baseline);
+            theBackContext.stroke();
+            // Peaks drawer
+            theBackContext.beginPath();
+            theBackContext.moveTo(115+xDiff,baseline-25);
+            theBackContext.lineTo(145+xDiff,baseline-25);
+            theBackContext.lineTo(162+xDiff,baseline-55);
+            theBackContext.lineTo(193+xDiff,baseline-55);
+            theBackContext.stroke();
+            // Right, larger mountain
+            theBackContext.beginPath();
+            theBackContext.moveTo(145+xDiff,baseline-25);
+            theBackContext.lineTo(175+xDiff,baseline-80);
+            theBackContext.lineTo(235+xDiff,baseline);
+            theBackContext.stroke();
+        }
+
+
+        function drawClouds(xDiff) {
+            theBackContext.fillStyle = 'rgb(210,223,244)';
+            theBackContext.beginPath();
+            theBackContext.arc(250+xDiff,50,60,0,2*Math.PI); //center
+            theBackContext.arc(312+xDiff,60,40,0,2*Math.PI); //right
+            theBackContext.arc(188+xDiff,60,40,0,2*Math.PI);  //left
+            theBackContext.fill();
+        }
+
+
+//        Creating Player Class
+        var Player = function() {
+            this.x = startX;
+            this.y = startY;
+            this.width = 75;
+            this.height = 40;
+            this.travelDist = 8;
+            keyPressed(this);
+            keyReleased(this);
+//            Player Class' update function
+            this.update = function (keycode) {
+                theContext.clearRect(this.x, this.y, this.width, this.height);
+                if (keys[37]) { // left
+                    this.x -= this.travelDist;
+                }
+                if (keys[38]) { // up
+                    this.y -= this.travelDist;
+                }
+                 if (keys[39]) { // right
+                     this.x += this.travelDist;
+                 }
+                 if (keys[40]) { // down
+                        this.y += this.travelDist;
+                }
+                checkBoundaries(this);
+                // Redraws car
+                theContext.fillStyle = 'red';
+                theContext.fillRect(this.x, this.y, this.width, this.height/2);
+                theContext.fillRect(this.x + this.travelDist,this.y - this.height/2,this.width/2,this.height);
+                // Redraws wheels
+                theContext.fillStyle = 'black';
+                theContext.beginPath();
+                theContext.arc(this.x+this.travelDist,this.y+this.height/2,this.height/2,0,2*Math.PI);
+                theContext.arc(this.x+this.width,this.y+this.height/2,this.height/2,0,2*Math.PI);
+                theContext.fill();
+            };
+            // Draws car
+            theContext.fillStyle = 'red';
+            theContext.fillRect(this.x, this.y - this.y/2, this.width, this.height/2);
+            theContext.fillRect(this.x + this.x/2,this.y - this.y/2,this.width/2,this.height);
+            // Draws wheels
+            theContext.fillStyle = 'black';
+            theContext.beginPath();
+            theContext.arc(this.x+this.width/6,this.y+this.height/2,this.height/2,0,2*Math.PI);
+            theContext.arc((this.x/4)+(this.width),this.y+this.height/2,this.height/2,0,2*Math.PI);
+            theContext.fill();
+        };
+
+
+//        Creating Frog Class
+        var Frog = function(x, y, spd) {
+            this.x = x;
+            this.y = y;
+            this.spd = spd;
+            this.xSpd = Math.random() * (this.spd - (-this.spd) + (-this.spd));
+            this.ySpd = Math.random() * (this.spd - (-this.spd) + (-this.spd));
+            this.width = 20;
+            this.height = 20;
+            this.travelDist = 5;
+//            Frog Class' update function
+            this.update = function () {
+                this.x = this.x + this.xSpd;
+                if (this.x < 10 || this.x > canvasWidth - 10) {
+                    this.xSpd = -this.xSpd;
+                }
+                this.y = this.y + this.ySpd;
+                if (this.y < ((canvasHeight/2)-50) || this.y > canvasHeight - 50) {
+                    this.ySpd = -this.ySpd;
+                }
+                theContext.fillStyle = 'green';
+                theContext.fillRect(this.x, this.y, this.width, this.height);
+            };
+            theContext.fillStyle = 'green';
+            theContext.fillRect(this.x, this.y, this.width, this.height);
+        };
+
+
+//        Creating array for all Frog objects
+        var frogs = [];
+        for (var i = 0; i < 20; i++) {
+            frogs[i] = new Frog(
+                // ** Math.random() * (max - min) + min **
+                Math.random() * (canvasWidth - (canvasWidth/2)) + (canvasWidth/2),
+                Math.random() * ((canvasHeight - (heightIncr/2)) - ((canvasHeight/2)-50)) + ((canvasHeight/2)-50),
+                Math.floor(Math.random() * (3-1) + 1));
+        }
+
+
+//        Triggers update for Player movement
+        function keyPressed(player) {
+            document.addEventListener('keydown', function(event) {
+                keys[event.keyCode] = true;
+                player.update(event.keyCode)
+            })
+        }
+        function keyReleased(player) {
+            document.addEventListener('keyup', function(event) {
+                keys[event.keyCode] = false;
+                player.update(event.keyCode);
+            })
+        }
+
+
+//        Keeps Player within the canvas
+        function checkBoundaries(player) {
+            if (player.x < 0) {
+                player.x = 0;
+            }
+            else if ((player.x + player.width) >= theCanvas.width) {
+                player.x = (theCanvas.width - player.width);
+            }
+            if (player.y < 0) {
+                player.y = 0;
+            }
+            else if ((player.y + player.height) >= theCanvas.height) {
+                player.y = (theCanvas.height - player.height);
+            }
+        }
+
+
+//        Creates Player object
+        var thePlayer = new Player();
+
+
+//        Detect when Player runs into a Frog object
+        function checkCollisions(player, frogs) {
+            for (var i = 0; i < frogs.length; i++) {
+                if (player.x < frogs[i].x + frogs[i].width &&       // if player is left of frog's width
+                        player.x + player.width > frogs[i].x &&     // if player's width goes past frog
+                        player.y < frogs[i].y + frogs[i].height &&  // if player is above frog's height
+                        player.y + player.height > frogs[i].y) {    // if player's height is below frog
+                        playerLives -= 1;
+                        player.x = startX;
+                        player.y = startY;
+                    if (playerLives <= 0) {
+                        gameover = true;
+                    }
+                }
+            }
+        }
+
+
+//        Redraws all active objects
+        function draw() {
+            if (gameover == false) {
+                theContext.clearRect(0, 0, theCanvas.width, theCanvas.height);
+                thePlayer.update();
+                for (var i = 0; i < frogs.length; i++) {
+                    frogs[i].update();
+                }
+                checkCollisions(thePlayer, frogs);
+                theContext.font = "bold 15px MV Boli";
+                theContext.fillText("TIME: " + elapsedTime, 10, 25);
+                theContext.fillText("LIVES: " + playerLives, 10, 45);
+            } else {
+                theContext.clearRect(0,0,canvasWidth,canvasHeight);
+                theContext.fillStyle = 'red';
+                theContext.font = "bold 45px MV Boli";
+                theContext.fillText("GAMEOVER",canvasWidth/3,canvasHeight/2);
+            }
+        }
+    </script>
+
+</body>
+</html>
+
+<!--Helpful References:-->
+<!--https://www.youtube.com/watch?v=Pzox_XTpoVU-->
+<!--https://github.com/jmiguelsamper/html5-frogger/blob/master/js/core/Player.js-->
+<!--http://stackoverflow.com/questions/1527803/generating-random-whole-numbers-in-javascript-in-a-specific-range-->
+<!--http://stackoverflow.com/questions/2142535/how-to-clear-the-canvas-for-redrawing-->
+<!--http://stackoverflow.com/questions/15397036/drawing-dashed-lines-on-html5-canvas-->
+<!--https://www.khanacademy.org/computing/computer-programming/programming/animation-basics/p/challenge-parting-clouds-->
+<!--http://stackoverflow.com/questions/6802956/how-to-position-a-div-in-a-specific-coordinates-->
